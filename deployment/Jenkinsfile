@@ -1,0 +1,139 @@
+pipeline {
+
+    agent any
+
+    tools {
+    
+        maven "mvn"
+    }
+
+    stages {
+    
+        stage('Build') {
+        
+            steps {
+            
+                git url: 'https://github.com/ManosijTarafdar/course-pipeline.git'
+                
+                script {
+                	if( isUnix() ) {
+                		
+                		sh "mvn -Dmaven.test.failure.ignore=true clean package"
+					}	
+                	else {
+                	
+                 		bat "mvn -Dmaven.test.failure.ignore=true clean package"
+                 	}
+                 }
+            }
+        }
+        stage('Integration Test') {
+        
+        	steps {
+        	
+                script {
+                
+                	if( isUnix() ) {
+                	
+                		sh "mvn -Dmaven.test.failure.ignore=true clean verify"
+					}	
+                	else {
+                	
+                 		bat "mvn -Dmaven.test.failure.ignore=true clean verify"
+                 	}
+                 }
+            }
+         }
+		 stage('Sonarqube static analysis') {
+			steps {
+				script {
+					if(isUnix()) {
+						sh "mvn -Dmaven.test.failure.ignore=true sonar:sonar"
+               		}    
+					else {
+						bat "mvn -Dmaven.test.failure.ignore=true sonar:sonar"
+					}
+				}
+			 }
+		  }
+		  stage('Publish Artifactory') {
+			 steps {
+				script {
+					if(isUnix()) {
+						sh "mvn -Dmaven.test.failure.ignore=true deploy"
+               		}    
+					else {
+						bat "mvn -Dmaven.test.failure.ignore=true deploy"
+					}
+				}
+			  }
+			}
+			stage('Build Docker Image') {
+				steps {
+					script {
+						if (isUnix()) {
+							sh "mvn -Dmaven.test.failure.ignore=true spring-boot:build-image"
+               			}    
+						else {
+							bat "mvn -Dmaven.test.failure.ignore=true spring-boot:build-image"
+						}
+					}
+				}
+
+   			}
+   			stage('Load Docker Image') {
+				steps {
+					script {
+						if (isUnix()) {
+							sh "minikube image load my-courseapi-image"
+               			}    
+						else {
+							bat "minikube image load my-courseapi-image"
+						}
+					}
+				}
+
+   			}
+   			stage('Kubernetes Deploy') {
+				steps {
+					script {
+						if(isUnix()) {
+							sh "kubectl apply -f k8s/deployment.yml"
+               			}    
+						else {
+							bat "kubectl apply -f k8s/deployment.yml"
+						}
+					}
+				}
+
+   			}
+   			stage('Kubernetes Service') {
+				steps {
+					script {
+						if(isUnix()) {
+							sh "kubectl apply -f k8s/service.yml"
+               			}    
+						else {
+							bat "kubectl apply -f k8s/service.yml"
+						}
+					}
+				}
+
+  			 }
+		}
+			
+    post {
+    	
+    	success {
+    	
+    		jacoco(
+                	classPattern:'**/target/classes',
+                	sourcePattern:'**/src/main'
+                	)
+            junit '**/target/surefire-reports/TEST-*.xml'
+            archiveArtifacts 'target/*.jar'
+         }
+    }
+            
+        
+}
