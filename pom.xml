@@ -8,7 +8,7 @@
 		<version>3.1.3</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>devops-spring-groovy-ibm</groupId>
+	<groupId>devops-spring-groovy-EduFlix</groupId>
 	<artifactId>devops-spring-groovy</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>devops-spring-groovy</name>
